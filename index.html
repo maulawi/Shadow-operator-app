@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shadow Operator — Monetisation Execution App</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #060606;
+  --surface: #0E0E0E;
+  --surface2: #141414;
+  --surface3: #1a1a1a;
+  --gold: #B8972E;
+  --gold-dim: rgba(184,151,46,0.5);
+  --gold-glow: rgba(184,151,46,0.1);
+  --gold-border: rgba(184,151,46,0.35);
+  --white: #F5F0E8;
+  --muted: #7A7060;
+  --muted2: #3a3530;
+  --border: rgba(184,151,46,0.18);
+  --border2: rgba(184,151,46,0.4);
+  --green: #4a9e6b;
+  --green-bg: rgba(74,158,107,0.1);
+  --red: #9e4a4a;
+  --font: 'Inter', sans-serif;
+  --serif: 'Cormorant Garamond', serif;
+  --display: 'Cinzel', serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: var(--font);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── NOISE OVERLAY ─── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; opacity: 0.6;
+}
+
+/* ─── SCREENS ─── */
+.screen { display: none; min-height: 100vh; position: relative; z-index: 1; }
+.screen.active { display: flex; }
+
+/* ─── LOGIN ─── */
+#screen-login {
+  align-items: center; justify-content: center;
+  flex-direction: column; padding: 24px;
+}
+.login-wrap { width: 100%; max-width: 400px; }
+.login-logo {
+  font-size: 11px; font-family: var(--font); letter-spacing: .14em;
+  color: var(--gold); text-transform: uppercase; margin-bottom: 48px;
+  display: flex; align-items: center; gap: 10px;
+}
+.login-logo::before {
+  content: ''; width: 24px; height: 1px; background: var(--gold-dim);
+}
+h1.login-title {
+  font-family: var(--display);
+  font-size: clamp(26px,5vw,40px); font-weight: 600;
+  letter-spacing: .1em; line-height: 1.1; margin-bottom: 8px; text-transform: uppercase;
+}
+h1.login-title span { color: var(--gold); }
+.login-sub {
+  font-family: var(--serif); font-size: 15px; color: var(--muted);
+  margin-bottom: 40px; line-height: 1.6;
+}
+.role-tabs {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+  background: var(--border); border-radius: 6px; overflow: hidden;
+  margin-bottom: 28px;
+}
+.role-tab {
+  background: var(--surface); padding: 12px; text-align: center;
+  font-family: var(--display); font-size: 10px; font-weight: 600; cursor: pointer;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--muted); transition: all .15s;
+}
+.role-tab.active { background: rgba(184,151,46,0.1); color: var(--gold); border-bottom: 1px solid var(--gold); }
+.field-group { margin-bottom: 16px; }
+.field-label {
+  font-family: var(--font); font-size: 10px; letter-spacing: .08em;
+  color: var(--muted); text-transform: uppercase; margin-bottom: 6px; display: block;
+}
+.field-input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 2px; padding: 12px 14px; color: var(--white);
+  font-family: var(--font); font-size: 13px; outline: none;
+  transition: border-color .15s;
+}
+.field-input:focus { border-color: var(--gold-dim); }
+.field-input::placeholder { color: var(--muted2); }
+.btn-primary {
+  width: 100%; background: var(--gold); color: #060606;
+  border: none; border-radius: 2px; padding: 14px;
+  font-family: var(--display); font-size: 11px; font-weight: 600;
+  letter-spacing: .15em; text-transform: uppercase; cursor: pointer; transition: opacity .15s;
+  margin-top: 8px;
+}
+.btn-primary:hover { opacity: .88; }
+.login-note {
+  font-family: var(--font); font-size: 11px; color: var(--muted2);
+  text-align: center; margin-top: 20px; line-height: 1.7;
+}
+
+/* ─── APP SHELL ─── */
+#screen-creator, #screen-admin {
+  flex-direction: row;
+}
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  width: 220px; min-height: 100vh; background: var(--bg);
+  border-right: 1px solid var(--border); padding: 28px 0;
+  display: flex; flex-direction: column; flex-shrink: 0;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+}
+.sidebar-logo {
+  font-size: 10px; font-family: var(--display); letter-spacing: .2em;
+  color: var(--gold); text-transform: uppercase; padding: 0 20px 24px;
+  border-bottom: 1px solid var(--border); margin-bottom: 20px;
+}
+.sidebar-user {
+  padding: 0 20px 20px; border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+.sidebar-user-label {
+  font-family: var(--font); font-size: 9px; color: var(--muted);
+  letter-spacing: .1em; text-transform: uppercase; margin-bottom: 4px;
+}
+.sidebar-user-name { font-size: 13px; font-weight: 600; color: var(--white); }
+.sidebar-user-role {
+  font-family: var(--font); font-size: 11px; color: var(--gold); margin-top: 2px;
+}
+.nav-section-label {
+  font-family: var(--font); font-size: 10px; letter-spacing: .1em;
+  color: var(--muted2); text-transform: uppercase; padding: 0 20px 8px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 20px; cursor: pointer; transition: all .12s;
+  font-size: 13px; font-weight: 500; color: var(--muted);
+  border-left: 2px solid transparent;
+}
+.nav-item:hover { color: var(--white); background: var(--surface2); }
+.nav-item.active { color: var(--gold); border-left-color: var(--gold); background: rgba(184,151,46,0.08); }
+.nav-item .nav-icon { font-size: 14px; width: 18px; text-align: center; }
+.nav-badge {
+  margin-left: auto; background: var(--gold); color: #060606;
+  font-family: var(--display); font-size: 8px; font-weight: 700; padding: 2px 6px; border-radius: 0;
+}
+.sidebar-footer {
+  margin-top: auto; padding: 20px; border-top: 1px solid var(--border);
+}
+.btn-logout {
+  width: 100%; background: transparent; border: 1px solid var(--border);
+  border-radius: 4px; padding: 9px; font-family: var(--font); font-size: 12px;
+  color: var(--muted); cursor: pointer; transition: all .15s;
+}
+.btn-logout:hover { border-color: var(--muted); color: var(--white); }
+
+/* ─── MAIN CONTENT ─── */
+.main {
+  flex: 1; min-height: 100vh; overflow-y: auto;
+  padding: 36px 40px; background: var(--bg);
+}
+.page { display: none; }
+.page.active { display: block; }
+
+/* ─── PAGE HEADER ─── */
+.page-header { margin-bottom: 36px; }
+.page-eyebrow {
+  font-family: var(--display); font-size: 9px; letter-spacing: .2em;
+  color: var(--gold); text-transform: uppercase; margin-bottom: 10px;
+}
+.page-title {
+  font-family: var(--display);
+  font-size: clamp(18px,2.5vw,28px); font-weight: 600;
+  letter-spacing: .1em; line-height: 1.15; margin-bottom: 6px; text-transform: uppercase;
+}
+.page-sub {
+  font-family: var(--serif); font-size: 13px; color: var(--muted); line-height: 1.75;
+}
+
+/* ─── CARDS ─── */
+.card {
+  background: var(--surface); border: 1px solid var(--gold-border);
+  border-radius: 2px; padding: 20px 22px; margin-bottom: 12px;
+}
+.card-title { font-family: var(--display); font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; color: var(--gold); }
+.card-sub { font-family: var(--serif); font-size: 14px; color: var(--muted); line-height: 1.8; }
+
+/* ─── PROGRESS TRACKER ─── */
+.phase-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 32px; }
+.phase-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 2px; padding: 18px 20px; cursor: pointer;
+  transition: all .15s; display: grid;
+  grid-template-columns: 40px 1fr auto; gap: 14px; align-items: center;
+}
+.phase-card:hover:not(.locked) { border-color: var(--border2); background: var(--surface2); }
+.phase-card.locked { opacity: .5; cursor: not-allowed; }
+.phase-card.active-phase { border-color: var(--gold); background: rgba(184,151,46,0.07); }
+.phase-card.completed { border-color: rgba(74,158,107,0.3); }
+.phase-num {
+  width: 36px; height: 36px; border-radius: 0;
+  background: transparent; border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--display); font-size: 11px; color: var(--muted); letter-spacing: .05em;
+}
+.phase-card.active-phase .phase-num { border-color: var(--gold); color: var(--gold); background: rgba(184,151,46,0.1); }
+.phase-card.completed .phase-num { background: var(--green-bg); border-color: rgba(74,158,107,0.4); color: var(--green); }
+.phase-name { font-family: var(--display); font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; margin-bottom: 2px; }
+.phase-desc { font-family: var(--serif); font-size: 11px; color: var(--muted); }
+.phase-status {
+  font-family: var(--font); font-size: 10px; padding: 3px 10px;
+  border-radius: 20px; white-space: nowrap;
+}
+.status-open { background: var(--green-bg); color: var(--green); }
+.status-locked { background: var(--surface3); color: var(--muted2); }
+.status-active { background: var(--gold-glow); color: var(--gold); }
+.status-pending { background: rgba(200,169,110,0.08); color: var(--gold-dim); border: 1px solid var(--border2); }
+
+/* ─── PHASE 1 CONTENT ─── */
+.section-title {
+  font-family: var(--display); font-size: 13px; font-weight: 600;
+  letter-spacing: .12em; text-transform: uppercase; margin-bottom: 4px; color: var(--gold);
+}
+.section-sub {
+  font-family: var(--serif); font-size: 14px; color: var(--muted);
+  margin-bottom: 20px; line-height: 1.75;
+}
+.divider { height: 1px; background: var(--border); margin: 28px 0; }
+
+/* Education blocks */
+.edu-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 28px; }
+.edu-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 2px; padding: 16px;
+}
+.edu-num-PLACEHOLDER {
+  font-family: var(--font); font-size: 10px; color: var(--gold);
+  margin-bottom: 8px;
+}
+.edu-title { font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; margin-bottom: 6px; color: var(--gold); }
+.edu-body { font-family: var(--serif); font-size: 13px; color: var(--muted); line-height: 1.755; }
+
+/* Templates */
+.template-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 28px; }
+.template-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 2px; overflow: hidden;
+}
+.template-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 18px; cursor: pointer; transition: background .12s;
+}
+.template-header:hover { background: var(--surface2); }
+.template-name { font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.template-toggle {
+  font-family: var(--font); font-size: 10px; color: var(--gold);
+  background: var(--gold-glow); padding: 3px 10px; border-radius: 20px;
+}
+.template-body {
+  padding: 0 18px; max-height: 0; overflow: hidden;
+  transition: max-height .3s ease, padding .3s;
+  font-family: var(--serif); font-size: 13px; color: var(--muted); line-height: 1.8;
+}
+.template-body.open { max-height: 400px; padding: 4px 18px 18px; }
+.template-section { margin-bottom: 12px; }
+.template-section strong { color: var(--gold); display: block; margin-bottom: 4px; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+
+/* CTA Variations */
+.cta-grid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 28px; }
+.cta-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 2px; padding: 16px 18px;
+}
+.cta-var {
+  font-family: var(--font); font-size: 10px; color: var(--gold); letter-spacing: .06em;
+  letter-spacing: .1em; text-transform: uppercase; margin-bottom: 8px;
+}
+.cta-text {
+  font-family: var(--serif); font-size: 12px; color: var(--white);
+  line-height: 1.7; font-style: italic;
+}
+.cta-copy-btn {
+  margin-top: 10px; background: transparent; border: 1px solid var(--border);
+  border-radius: 4px; padding: 5px 12px; font-family: var(--font);
+  font-size: 10px; color: var(--muted); cursor: pointer; transition: all .12s;
+}
+.cta-copy-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+/* Request Script */
+.request-area {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 2px; padding: 20px 22px;
+}
+.request-title { font-family: var(--display); font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+.request-sub { font-family: var(--serif); font-size: 14px; color: var(--muted); margin-bottom: 16px; line-height: 1.75; }
+.request-textarea {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 4px; padding: 12px 14px; color: var(--white);
+  font-family: var(--font); font-size: 13px; outline: none;
+  resize: vertical; min-height: 90px; line-height: 1.6;
+  transition: border-color .15s;
+}
+.request-textarea:focus { border-color: var(--gold-dim); }
+.btn-request {
+  margin-top: 10px; background: var(--gold); color: #060606;
+  border: none; border-radius: 2px; padding: 11px 22px;
+  font-family: var(--display); font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+  cursor: pointer; transition: opacity .15s;
+}
+.btn-request:hover { opacity: .88; }
+
+/* Script response */
+.script-response {
+  background: rgba(184,151,46,0.08); border: 1px solid var(--gold-border);
+  border-radius: 2px; padding: 18px 20px; margin-top: 12px;
+}
+.script-label {
+  font-family: var(--font); font-size: 10px; color: var(--gold); letter-spacing: .06em;
+  letter-spacing: .1em; text-transform: uppercase; margin-bottom: 10px;
+}
+.script-text {
+  font-family: var(--serif); font-size: 12px; color: var(--white);
+  line-height: 1.8; white-space: pre-wrap;
+}
+
+/* ─── ADMIN ─── */
+.stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 28px; }
+.stat-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 2px; padding: 16px 18px;
+}
+.stat-num { font-family: var(--display); font-size: 28px; font-weight: 600; letter-spacing: .02em; color: var(--gold); }
+.stat-label { font-family: var(--font); font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+.creator-row {
+  display: grid; grid-template-columns: 1fr auto auto auto;
+  gap: 12px; align-items: center;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 2px; padding: 14px 18px; margin-bottom: 8px;
+}
+.creator-name { font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--white); }
+.creator-meta { font-family: var(--font); font-size: 11px; color: var(--muted); margin-top: 2px; }
+.phase-pill {
+  font-family: var(--font); font-size: 10px; padding: 3px 10px;
+  border-radius: 20px; background: var(--surface3); color: var(--muted);
+}
+.btn-unlock {
+  background: var(--green-bg); border: 1px solid rgba(74,158,107,0.3);
+  border-radius: 4px; padding: 6px 12px; font-family: var(--font);
+  font-size: 10px; color: var(--green); cursor: pointer; transition: all .12s;
+}
+.btn-unlock:hover { background: rgba(74,158,107,0.2); }
+
+.request-row {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 2px; padding: 16px 18px; margin-bottom: 8px;
+}
+.request-meta {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 8px;
+}
+.request-from { font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); }
+.request-time { font-family: var(--font); font-size: 11px; color: var(--muted); }
+.request-msg { font-family: var(--serif); font-size: 13px; color: var(--muted); line-height: 1.75; margin-bottom: 12px; }
+.admin-reply-area {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 4px; padding: 10px 12px; color: var(--white);
+  font-family: var(--font); font-size: 13px; outline: none;
+  resize: vertical; min-height: 70px; line-height: 1.6;
+}
+.admin-reply-area:focus { border-color: var(--gold-dim); }
+.btn-send {
+  margin-top: 8px; background: var(--gold); color: #060606;
+  border: none; border-radius: 2px; padding: 8px 16px;
+  font-family: var(--display); font-size: 9px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+  cursor: pointer;
+}
+
+/* ─── TOAST ─── */
+.toast {
+  position: fixed; bottom: 28px; right: 28px; z-index: 100;
+  background: var(--surface); border: 1px solid var(--gold-border);
+  border-radius: 2px; padding: 12px 18px;
+  font-family: var(--display); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--gold);
+  opacity: 0; transform: translateY(8px);
+  transition: all .2s; pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+
+/* ─── NOTIFICATIONS ─── */
+.notif-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 2px; overflow: hidden; margin-bottom: 12px;
+  transition: border-color .15s;
+}
+.notif-card.unread { border-color: var(--border2); }
+.notif-card-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
+}
+.notif-card-header-left { flex: 1; }
+.notif-title {
+  font-family: var(--display); font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  margin-bottom: 4px; display: flex; align-items: center; gap: 8px; color: var(--gold);
+}
+.unread-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--gold); flex-shrink: 0;
+  animation: pulse 2s infinite;
+}
+.notif-meta {
+  font-family: var(--font); font-size: 11px; color: var(--muted);
+}
+.notif-card-body {
+  padding: 18px 20px;
+  font-family: var(--serif); font-size: 14px; color: var(--white);
+  line-height: 1.85; white-space: pre-wrap;
+}
+.notif-card-footer {
+  display: flex; gap: 8px; padding: 0 20px 16px;
+}
+.btn-copy-script {
+  background: var(--gold); color: #060606;
+  border: none; border-radius: 2px; padding: 9px 18px;
+  font-family: var(--display); font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+  cursor: pointer; transition: opacity .15s;
+}
+.btn-copy-script:hover { opacity: .88; }
+.btn-mark-read {
+  background: transparent; border: 1px solid var(--border);
+  border-radius: 4px; padding: 9px 14px;
+  font-family: var(--font); font-size: 12px; color: var(--muted);
+  cursor: pointer; transition: all .15s;
+}
+.btn-mark-read:hover { border-color: var(--muted); color: var(--white); }
+
+/* ─── MOBILE BOTTOM NAV ─── */
+.mobile-nav {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+  background: var(--bg); border-top: 1px solid var(--border);
+  padding: 0; height: 60px;
+}
+.mobile-nav-inner {
+  display: flex; height: 100%;
+}
+.mobile-nav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 3px; cursor: pointer;
+  color: var(--muted); font-size: 10px; font-weight: 500;
+  transition: color .15s; position: relative; padding: 8px 4px;
+}
+.mobile-nav-item.active { color: var(--gold); }
+.mobile-nav-item .mn-icon { font-size: 18px; line-height: 1; }
+.mobile-nav-item .mn-label { font-size: 9px; letter-spacing: .04em; }
+.mobile-nav-badge {
+  position: absolute; top: 6px; right: calc(50% - 16px);
+  background: var(--gold); color: #080807;
+  font-size: 8px; font-weight: 700; padding: 1px 5px;
+  border-radius: 10px; min-width: 14px; text-align: center;
+  display: none;
+}
+
+/* ─── MOBILE HEADER ─── */
+.mobile-header {
+  display: none;
+  position: sticky; top: 0; z-index: 40;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+  padding: 14px 20px; align-items: center; justify-content: space-between;
+}
+.mobile-header-logo {
+  font-size: 9px; font-family: var(--display); letter-spacing: .22em;
+  color: var(--gold); text-transform: uppercase;
+}
+.mobile-header-user {
+  font-size: 12px; font-weight: 600; color: var(--white);
+}
+.mobile-header-logout {
+  background: transparent; border: 1px solid var(--border);
+  border-radius: 4px; padding: 5px 10px; font-family: var(--font);
+  font-size: 11px; color: var(--muted); cursor: pointer;
+}
+
+/* ─── RESPONSIVE BREAKPOINT ─── */
+@media (max-width: 680px) {
+
+  /* Hide desktop sidebar */
+  .sidebar { display: none !important; }
+
+  /* Show mobile header and bottom nav */
+  .mobile-header { display: flex !important; }
+  .mobile-nav { display: flex !important; }
+
+  /* App screens stack vertically */
+  #screen-creator, #screen-admin {
+    flex-direction: column !important;
+  }
+
+  /* Main content fills screen, account for header + bottom nav */
+  .main {
+    padding: 20px 16px 80px !important;
+    min-height: calc(100vh - 60px) !important;
+  }
+
+  /* Login page */
+  #screen-login { padding: 32px 20px !important; }
+  h1.login-title { font-size: 28px !important; }
+  .login-sub { font-size: 13px !important; }
+
+  /* Page header */
+  .page-header { margin-bottom: 24px !important; }
+  .page-title { font-size: 22px !important; }
+
+  /* Phase cards — single column, simpler layout */
+  .phase-card {
+    grid-template-columns: 36px 1fr !important;
+    gap: 12px !important;
+    padding: 14px 16px !important;
+  }
+  .phase-status {
+    display: none !important; /* shown in meta instead */
+  }
+  .phase-name { font-size: 13px !important; }
+  .phase-desc { font-size: 11px !important; }
+  .phase-num { width: 36px !important; height: 36px !important; font-size: 11px !important; }
+
+  /* Education grid — single column */
+  .edu-grid { grid-template-columns: 1fr !important; }
+
+  /* Stats row — 2x2 */
+  .stats-row { grid-template-columns: 1fr 1fr !important; }
+  .stat-num { font-size: 22px !important; }
+
+  /* Creator row — stack vertically */
+  .creator-row {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  .phase-pill { display: inline-block !important; width: fit-content !important; }
+  .btn-unlock { width: 100% !important; padding: 10px !important; font-size: 12px !important; }
+
+  /* Request row adjustments */
+  .request-meta { flex-direction: column !important; gap: 4px !important; }
+  .admin-reply-area { min-height: 100px !important; }
+  .btn-send { width: 100% !important; padding: 12px !important; font-size: 13px !important; }
+
+  /* Notification card */
+  .notif-card-footer { flex-direction: column !important; gap: 8px !important; }
+  .btn-copy-script { width: 100% !important; padding: 12px !important; }
+  .btn-mark-read { width: 100% !important; padding: 12px !important; text-align: center !important; }
+
+  /* CTA grid */
+  .cta-grid { gap: 10px !important; }
+  .cta-copy-btn { width: 100% !important; padding: 10px !important; text-align: center !important; }
+
+  /* Request area */
+  .request-area { padding: 16px !important; }
+  .btn-request { width: 100% !important; padding: 14px !important; }
+
+  /* Toast — full width bottom */
+  .toast {
+    bottom: 70px !important; left: 16px !important; right: 16px !important;
+    text-align: center !important;
+  }
+
+  /* Section titles */
+  .section-title { font-size: 15px !important; }
+  .section-sub { font-size: 13px !important; }
+
+  /* Card padding */
+  .card { padding: 16px !important; }
+  .card-title { font-size: 13px !important; }
+
+  /* Template header */
+  .template-header { padding: 12px 14px !important; }
+  .template-name { font-size: 12px !important; }
+  .template-body.open { padding: 4px 14px 14px !important; }
+
+  /* Notif body text */
+  .notif-card-body { font-size: 13px !important; padding: 14px 16px !important; }
+  .notif-card-header { padding: 14px 16px 12px !important; }
+}
+
+/* ─── SPARTAN GOLD DECORATORS ─── */
+.gold-rule {
+  display: flex; align-items: center; gap: 10px;
+  margin: 6px 0 24px;
+}
+.gold-rule-line { flex: 1; height: 1px; background: linear-gradient(to right, transparent, var(--gold), transparent); }
+.gold-diamond { width: 6px; height: 6px; background: var(--gold); transform: rotate(45deg); flex-shrink: 0; }
+
+/* Sidebar gold accent top */
+.sidebar::before {
+  content: '';
+  display: block; height: 2px; width: 100%;
+  background: linear-gradient(to right, transparent, var(--gold), transparent);
+  margin-bottom: 0;
+}
+
+/* Main area top border */
+.main::before {
+  content: '';
+  display: block; height: 1px; width: 100%;
+  background: linear-gradient(to right, transparent, var(--gold-dim), transparent);
+  margin-bottom: 36px;
+}
+
+/* Status pill updates */
+.status-open { background: rgba(74,158,107,0.1); color: #6aad65; border: 1px solid rgba(74,158,107,0.3); }
+.status-active { background: rgba(184,151,46,0.1); color: var(--gold); border: 1px solid var(--border); }
+.status-locked { background: transparent; color: var(--muted2); border: 1px solid var(--muted2); }
+.status-pending { background: rgba(184,151,46,0.08); color: var(--gold); border: 1px solid var(--border2); }
+
+/* Login box subtle border */
+.login-wrap {
+  position: relative;
+}
+.login-wrap::before {
+  content: '';
+  position: absolute; top: 0; bottom: 0; left: -1px;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, var(--gold-dim), transparent);
+  pointer-events: none;
+}
+
+/* Section label gold rule */
+.sec-label-gold {
+  display: flex; align-items: center; gap: 12px;
+  font-family: var(--display); font-size: 9px; letter-spacing: .2em;
+  color: var(--gold); text-transform: uppercase; margin-bottom: 16px;
+}
+.sec-label-gold::before, .sec-label-gold::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(to right, transparent, var(--gold-dim));
+}
+.sec-label-gold::after {
+  background: linear-gradient(to left, transparent, var(--gold-dim));
+}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--muted2); border-radius: 2px; }
+
+/* Fade in */
+@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+.page.active { animation: fadeUp .2s ease; }
+</style>
+</head>
+<body>
+
+<!-- ─── LOGIN ─── -->
+<div id="screen-login" class="screen active">
+  <div class="login-wrap">
+    <div class="login-logo">Shadow Operator</div>
+    <h1 class="login-title">Monetisation<br><span>Execution App</span></h1>
+    <div class="gold-rule"><div class="gold-rule-line"></div><div class="gold-diamond"></div><div class="gold-rule-line"></div></div>
+    <p class="login-sub">A structured system for turning your audience into income.</p>
+    <div class="role-tabs">
+      <div class="role-tab active" onclick="setRole('creator')">Creator</div>
+      <div class="role-tab" onclick="setRole('admin')">Admin</div>
+    </div>
+    <div id="creator-fields">
+      <div class="field-group">
+        <label class="field-label">Instagram Username</label>
+        <input class="field-input" id="ig-input" placeholder="@yourhandle" />
+      </div>
+    </div>
+    <div id="admin-fields" style="display:none">
+      <div class="field-group">
+        <label class="field-label">Admin Password</label>
+        <input class="field-input" type="password" id="pw-input" placeholder="••••••••" />
+      </div>
+    </div>
+    <button class="btn-primary" onclick="login()">Enter the System</button>
+    <p class="login-note">Prototype demo — no real auth. Creator: any name. Admin: type "admin"</p>
+  </div>
+</div>
+
+<!-- ─── CREATOR APP ─── -->
+<div id="screen-creator" class="screen">
+
+  <!-- Mobile header -->
+  <div class="mobile-header" id="creator-mobile-header">
+    <div class="mobile-header-logo">Shadow Operator</div>
+    <div class="mobile-header-user" id="creator-name-display-mobile"></div>
+    <button class="mobile-header-logout" onclick="logout()">Out</button>
+  </div>
+  <nav class="sidebar">
+    <div class="sidebar-logo">Shadow Operator</div>
+    <div class="sidebar-user">
+      <div class="sidebar-user-label">Logged in as</div>
+      <div class="sidebar-user-name" id="creator-name-display">@creator</div>
+      <div class="sidebar-user-role">Creator</div>
+    </div>
+    <div class="nav-section-label">Navigation</div>
+    <div class="nav-item active" onclick="showPage('dashboard')">
+      <span class="nav-icon">◈</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="showPage('notifications')" id="nav-notifications">
+      <span class="nav-icon">🔔</span> Notifications
+      <span class="nav-badge" id="notif-badge" style="display:none">0</span>
+    </div>
+    <div class="nav-item" onclick="showPage('phase1')">
+      <span class="nav-icon">①</span> Phase 1
+    </div>
+    <div class="nav-item" onclick="showPage('phase2')">
+      <span class="nav-icon">②</span> Phase 2
+    </div>
+    <div class="nav-item" onclick="showPage('phase3')">
+      <span class="nav-icon">③</span> Phase 3
+    </div>
+    <div class="nav-item" onclick="showPage('phase4')">
+      <span class="nav-icon">④</span> Phase 4
+    </div>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="logout()">← Log out</button>
+    </div>
+  </nav>
+
+  <main class="main">
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div class="page-eyebrow">Overview</div>
+        <div class="page-title">Your Monetisation System</div>
+        <div class="page-sub">Work through each phase in order. Phases unlock after admin review.</div>
+      </div>
+      <div class="phase-grid">
+        <div class="phase-card active-phase" onclick="showPage('phase1')">
+          <div class="phase-num">01</div>
+          <div>
+            <div class="phase-name">Market Analysis</div>
+            <div class="phase-desc">Identify your ICP before building anything</div>
+          </div>
+          <span class="phase-status status-active">Active</span>
+        </div>
+        <div class="phase-card locked">
+          <div class="phase-num">02</div>
+          <div>
+            <div class="phase-name">Create / Optimise Offers</div>
+            <div class="phase-desc">Build the right offer for your audience</div>
+          </div>
+          <span class="phase-status status-locked">Locked</span>
+        </div>
+        <div class="phase-card locked">
+          <div class="phase-num">03</div>
+          <div>
+            <div class="phase-name">Conversion Foundation Scripts</div>
+            <div class="phase-desc">Scripts that build trust and prime for sale</div>
+          </div>
+          <span class="phase-status status-locked">Locked</span>
+        </div>
+        <div class="phase-card locked">
+          <div class="phase-num">04</div>
+          <div>
+            <div class="phase-name">Conversion System Scripts</div>
+            <div class="phase-desc">Full launch and close sequences</div>
+          </div>
+          <span class="phase-status status-locked">Locked</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">How this works</div>
+        <div class="card-sub" style="margin-top:8px">
+          Complete Phase 1 → request admin review → Phase 2 unlocks → repeat.<br>
+          Each phase builds on the last. Don't skip ahead.
+        </div>
+      </div>
+    </div>
+
+    <!-- Notifications -->
+    <div class="page" id="page-notifications">
+      <div class="page-header">
+        <div class="page-eyebrow">Inbox</div>
+        <div class="page-title">Your Scripts</div>
+        <div class="page-sub">Personalised scripts sent by Shadow Operator. Read, copy, and post.</div>
+      </div>
+      <div id="notif-empty" style="text-align:center;padding:56px 24px;background:var(--surface);border:1px solid var(--border);border-radius:6px">
+        <div style="font-size:28px;margin-bottom:14px">✉️</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:6px">No scripts yet</div>
+        <div style="font-family:var(--serif);font-size:14px;color:var(--muted);line-height:1.7">Request a personalised script in Phase 1 and it will appear here once Shadow Operator has reviewed and written it for you.</div>
+      </div>
+      <div id="notif-list"></div>
+    </div>
+
+    <!-- Phase 1 -->
+    <div class="page" id="page-phase1">
+      <div class="page-header">
+        <div class="page-eyebrow">Phase 01 — Unlocked</div>
+        <div class="page-title">Market Analysis</div>
+        <div class="page-sub">Understand your audience before building anything. This is the foundation everything else runs on.</div>
+      </div>
+
+      <!-- Education -->
+      <div class="section-title">Why this matters</div>
+      <div class="section-sub">Most creators skip this and build for an assumed audience. That's how you end up with a launch that doesn't convert.</div>
+      <div class="edu-grid">
+        <div class="edu-card">
+          <div class="edu-num">01</div>
+          <div class="edu-title">Know their problem</div>
+          <div class="edu-body">Your audience has specific pain points. Generic offers don't sell. Problem-specific offers do.</div>
+        </div>
+        <div class="edu-card">
+          <div class="edu-num">02</div>
+          <div class="edu-title">Know their outcome</div>
+          <div class="edu-body">What does success look like for them? Your offer should be the bridge from where they are to where they want to be.</div>
+        </div>
+        <div class="edu-card">
+          <div class="edu-num">03</div>
+          <div class="edu-title">Know their budget</div>
+          <div class="edu-body">What will they actually pay? This determines whether you build a $47 community or a $3,000 mentorship first.</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Strategy -->
+      <div class="section-title">Execution Strategy</div>
+      <div class="section-sub">Run this for 3–4 days to your existing audience. You collect the data. We build from it.</div>
+      <div class="card" style="margin-bottom:8px">
+        <div class="card-title">Step 1 — Tease</div>
+        <div class="card-sub" style="margin-top:6px">Post a story or reel hinting that you're building something new for your audience. Don't reveal details yet. Create curiosity.</div>
+      </div>
+      <div class="card" style="margin-bottom:8px">
+        <div class="card-title">Step 2 — Incentivise</div>
+        <div class="card-sub" style="margin-top:6px">Offer a free guide (your roadmap PDF) or a chance to win a 1:1 session. Drive audience to the form link in your bio.</div>
+      </div>
+      <div class="card" style="margin-bottom:24px">
+        <div class="card-title">Step 3 — Collect</div>
+        <div class="card-sub" style="margin-top:6px">Your form collects: current situation, core problem, desired outcome, and budget range. This defines your ICP.</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Templates -->
+      <div class="section-title">Content & Story Templates</div>
+      <div class="section-sub">Pick one. Customise the brackets. Post it.</div>
+      <div class="template-list">
+        <div class="template-card">
+          <div class="template-header" onclick="toggleTemplate(this)">
+            <span class="template-name">Case Study Template</span>
+            <span class="template-toggle">View →</span>
+          </div>
+          <div class="template-body">
+            <div class="template-section"><strong>Hook</strong>"[Client type] went from [problem] to [result] in [timeframe]. Here's exactly what changed."</div>
+            <div class="template-section"><strong>Body</strong>"They were [situation]. They tried [failed attempt]. What finally worked was [insight]. The key shift was [lesson]."</div>
+            <div class="template-section"><strong>CTA</strong>"If you're dealing with [problem], I'm building something for you. Form in bio for early access + a free guide."</div>
+          </div>
+        </div>
+        <div class="template-card">
+          <div class="template-header" onclick="toggleTemplate(this)">
+            <span class="template-name">Quick Win Template</span>
+            <span class="template-toggle">View →</span>
+          </div>
+          <div class="template-body">
+            <div class="template-section"><strong>Hook</strong>"One thing I'd tell every [audience] trying to [goal] right now."</div>
+            <div class="template-section"><strong>Body</strong>"Most people think the problem is [common assumption]. It's not. The real issue is [reframe]. When you fix that, [outcome] becomes possible without [objection]."</div>
+            <div class="template-section"><strong>CTA</strong>"I'm putting together a [system/program] around this. Bio link if you want to be first in."</div>
+          </div>
+        </div>
+        <div class="template-card">
+          <div class="template-header" onclick="toggleTemplate(this)">
+            <span class="template-name">"If I Started Over" Template</span>
+            <span class="template-toggle">View →</span>
+          </div>
+          <div class="template-body">
+            <div class="template-section"><strong>Hook</strong>"If I was starting as a [niche] creator today with [audience size], here's exactly what I'd do first."</div>
+            <div class="template-section"><strong>Body</strong>"I wouldn't [common mistake]. I'd focus entirely on [strategy]. Specifically: [step 1], [step 2], [step 3]. The goal isn't [vanity metric]. It's [real outcome]."</div>
+            <div class="template-section"><strong>CTA</strong>"Building something around this for [audience]. Early-access form in my bio — also includes a free [resource]."</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- CTA Variations -->
+      <div class="section-title">CTA Variations</div>
+      <div class="section-sub">Use these as your caption or story CTA. Copy and customise.</div>
+      <div class="cta-grid">
+        <div class="cta-card">
+          <div class="cta-var">Variation A — Direct</div>
+          <div class="cta-text">"I'm finalising a [SYSTEM/PROGRAM] for [AUDIENCE] right now. Everyone who fills out the form in my bio gets first access + a free guide."</div>
+          <button class="cta-copy-btn" onclick="copyCTA(this, 'A')">Copy text</button>
+        </div>
+        <div class="cta-card">
+          <div class="cta-var">Variation B — Soft</div>
+          <div class="cta-text">"Building something for [AUDIENCE] in the next few weeks. Form in my bio if you want early access."</div>
+          <button class="cta-copy-btn" onclick="copyCTA(this, 'B')">Copy text</button>
+        </div>
+        <div class="cta-card">
+          <div class="cta-var">Variation C — Urgency</div>
+          <div class="cta-text">"Closing the early-access list soon. Bio link if you want a spot."</div>
+          <button class="cta-copy-btn" onclick="copyCTA(this, 'C')">Copy text</button>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Request Script -->
+      <div class="request-area">
+        <div class="request-title">👉 Request a Personalised Script</div>
+        <div class="request-sub">Tell me about your niche, audience, and what you're building. I'll write a custom script for you.</div>
+        <textarea class="request-textarea" id="script-request-input" placeholder="e.g. I'm a fitness coach targeting busy mums 30-45. I want to build a 12-week online program. My audience is around 18k on Instagram..."></textarea>
+        <button class="btn-request" onclick="submitRequest()">Send Request →</button>
+        <div class="script-response" id="script-response" style="display:none">
+          <div class="script-label">Your Personalised Script — from Shadow Operator</div>
+          <div class="script-text" id="script-text-content"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 2 locked -->
+    <div class="page" id="page-phase2">
+      <div class="page-header">
+        <div class="page-eyebrow">Phase 02 — Locked</div>
+        <div class="page-title">Create / Optimise Offers</div>
+        <div class="page-sub">This phase unlocks after your Phase 1 market analysis is reviewed and approved.</div>
+      </div>
+      <div class="card" style="border-color:var(--border2);text-align:center;padding:48px">
+        <div style="font-size:32px;margin-bottom:16px">🔒</div>
+        <div class="card-title">Awaiting Phase 1 Completion</div>
+        <div class="card-sub" style="margin-top:8px">Complete Phase 1 and request a script. Once reviewed, this phase will unlock automatically.</div>
+      </div>
+    </div>
+
+    <!-- Phase 3 locked -->
+    <div class="page" id="page-phase3">
+      <div class="page-header">
+        <div class="page-eyebrow">Phase 03 — Locked</div>
+        <div class="page-title">Conversion Foundation Scripts</div>
+        <div class="page-sub">Unlocks after Phase 2 is approved.</div>
+      </div>
+      <div class="card" style="border-color:var(--border2);text-align:center;padding:48px">
+        <div style="font-size:32px;margin-bottom:16px">🔒</div>
+        <div class="card-title">Complete Phase 2 First</div>
+        <div class="card-sub" style="margin-top:8px">Your offer needs to be defined before conversion scripts are written.</div>
+      </div>
+    </div>
+
+    <!-- Phase 4 locked -->
+    <div class="page" id="page-phase4">
+      <div class="page-header">
+        <div class="page-eyebrow">Phase 04 — Locked</div>
+        <div class="page-title">Conversion System Scripts</div>
+        <div class="page-sub">Unlocks after Phase 3 is approved.</div>
+      </div>
+      <div class="card" style="border-color:var(--border2);text-align:center;padding:48px">
+        <div style="font-size:32px;margin-bottom:16px">🔒</div>
+        <div class="card-title">Complete Phase 3 First</div>
+        <div class="card-sub" style="margin-top:8px">Full launch and close sequences are built last — on top of your foundation.</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Mobile bottom nav -->
+  <nav class="mobile-nav" id="creator-mobile-nav">
+    <div class="mobile-nav-inner">
+      <div class="mobile-nav-item active" onclick="mobileShowPage('dashboard', this)">
+        <span class="mn-icon">◈</span>
+        <span class="mn-label">Home</span>
+      </div>
+      <div class="mobile-nav-item" onclick="mobileShowPage('notifications', this)">
+        <span class="mn-icon">🔔</span>
+        <span class="mn-label">Scripts</span>
+        <span class="mobile-nav-badge" id="mobile-notif-badge"></span>
+      </div>
+      <div class="mobile-nav-item" onclick="mobileShowPage('phase1', this)">
+        <span class="mn-icon">①</span>
+        <span class="mn-label">Phase 1</span>
+      </div>
+      <div class="mobile-nav-item" onclick="mobileShowPage('phase2', this)">
+        <span class="mn-icon">②</span>
+        <span class="mn-label">Phase 2</span>
+      </div>
+      <div class="mobile-nav-item" onclick="mobileShowPage('phase3', this)">
+        <span class="mn-icon">③</span>
+        <span class="mn-label">Phase 3</span>
+      </div>
+    </div>
+  </nav>
+
+</div>
+<div id="screen-admin" class="screen">
+
+  <!-- Mobile header -->
+  <div class="mobile-header">
+    <div class="mobile-header-logo">Shadow Operator</div>
+    <div class="mobile-header-user" style="font-size:11px;color:var(--gold)">Admin</div>
+    <button class="mobile-header-logout" onclick="logout()">Out</button>
+  </div>
+
+  <nav class="sidebar">
+    <div class="sidebar-logo">Shadow Operator</div>
+    <div class="sidebar-user">
+      <div class="sidebar-user-label">Admin panel</div>
+      <div class="sidebar-user-name">Shadow Operator</div>
+      <div class="sidebar-user-role">Admin</div>
+    </div>
+    <div class="nav-section-label">Manage</div>
+    <div class="nav-item active" onclick="showAdminPage('admin-overview')">
+      <span class="nav-icon">◈</span> Overview
+    </div>
+    <div class="nav-item" onclick="showAdminPage('admin-creators')">
+      <span class="nav-icon">◎</span> Creators
+    </div>
+    <div class="nav-item" onclick="showAdminPage('admin-requests')">
+      <span class="nav-icon">✉</span> Requests
+      <span class="nav-badge" id="request-badge">2</span>
+    </div>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="logout()">← Log out</button>
+    </div>
+  </nav>
+
+  <main class="main">
+    <!-- Admin Overview -->
+    <div class="page active" id="page-admin-overview">
+      <div class="page-header">
+        <div class="page-eyebrow">Admin</div>
+        <div class="page-title">System Overview</div>
+        <div class="page-sub">Manage creators, review requests, and control phase access.</div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-num">3</div>
+          <div class="stat-label">Active creators</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">2</div>
+          <div class="stat-label">Pending requests</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">1</div>
+          <div class="stat-label">Awaiting unlock</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">0</div>
+          <div class="stat-label">Phases unlocked today</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Quick actions</div>
+        <div class="card-sub" style="margin-top:8px">
+          → Go to <strong style="color:var(--gold);cursor:pointer" onclick="showAdminPage('admin-requests')">Requests</strong> to respond to pending script requests.<br>
+          → Go to <strong style="color:var(--gold);cursor:pointer" onclick="showAdminPage('admin-creators')">Creators</strong> to unlock phases.
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Creators -->
+    <div class="page" id="page-admin-creators">
+      <div class="page-header">
+        <div class="page-eyebrow">Admin</div>
+        <div class="page-title">Creators</div>
+        <div class="page-sub">Review progress and control phase access per creator.</div>
+      </div>
+      <div id="creator-list">
+        <div style="text-align:center;padding:48px 24px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-family:var(--serif);font-size:14px;color:var(--muted)">No creators have joined yet. They'll appear here once they log in and submit a request.</div>
+      </div>
+    </div>
+
+    <!-- Admin Requests -->
+    <div class="page" id="page-admin-requests">
+      <div class="page-header">
+        <div class="page-eyebrow">Admin</div>
+        <div class="page-title">Pending Requests</div>
+        <div class="page-sub">Review script requests and write personalised responses.</div>
+      </div>
+      <div id="request-list">
+        <div id="requests-empty" style="text-align:center;padding:48px 24px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-family:var(--serif);font-size:14px;color:var(--muted)">No pending requests yet. When a creator submits a script request it will appear here.</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Admin mobile bottom nav -->
+  <nav class="mobile-nav">
+    <div class="mobile-nav-inner">
+      <div class="mobile-nav-item active" onclick="mobileShowAdminPage('admin-overview', this)">
+        <span class="mn-icon">◈</span>
+        <span class="mn-label">Overview</span>
+      </div>
+      <div class="mobile-nav-item" onclick="mobileShowAdminPage('admin-creators', this)">
+        <span class="mn-icon">◎</span>
+        <span class="mn-label">Creators</span>
+      </div>
+      <div class="mobile-nav-item" onclick="mobileShowAdminPage('admin-requests', this)">
+        <span class="mn-icon">✉</span>
+        <span class="mn-label">Requests</span>
+        <span class="mobile-nav-badge" id="mobile-request-badge"></span>
+      </div>
+    </div>
+  </nav>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+let currentRole = 'creator';
+let creatorUsername = '';
+
+// ─── SHARED STATE (persists across login switches in same session) ───
+const state = {
+  creators: {},       // { '@handle': { phase: 1, joinedAt: 'Just now' } }
+  requests: [],       // [ { id, creator, context, phase, time, replied: bool } ]
+  notifications: {},  // { '@handle': [ { id, title, script, time, read } ] }
+};
+
+// ─── ROLE SWITCH ───
+function setRole(role) {
+  currentRole = role;
+  document.querySelectorAll('.role-tab').forEach((t,i) => {
+    t.classList.toggle('active', (i===0&&role==='creator')||(i===1&&role==='admin'));
+  });
+  document.getElementById('creator-fields').style.display = role==='creator' ? 'block' : 'none';
+  document.getElementById('admin-fields').style.display = role==='admin' ? 'block' : 'none';
+}
+
+// ─── LOGIN ───
+function login() {
+  if (currentRole === 'creator') {
+    const name = document.getElementById('ig-input').value.trim();
+    if (!name) { showToast('Enter your Instagram handle'); return; }
+    creatorUsername = name.startsWith('@') ? name : '@' + name;
+
+    // Register creator in state
+    if (!state.creators[creatorUsername]) {
+      state.creators[creatorUsername] = { phase: 1, joinedAt: 'Just now', hasRequest: false };
+    }
+
+    document.getElementById('creator-name-display').textContent = creatorUsername;
+    const mobileDisplay = document.getElementById('creator-name-display-mobile');
+    if (mobileDisplay) mobileDisplay.textContent = creatorUsername;
+
+    // Reset request UI if they haven't submitted yet
+    const hasRequest = state.requests.some(r => r.creator === creatorUsername);
+    if (!hasRequest) {
+      const inp = document.getElementById('script-request-input');
+      const btn = document.querySelector('.btn-request');
+      if (inp) { inp.disabled = false; inp.value = ''; }
+      if (btn) { btn.textContent = 'Send Request →'; btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; }
+    } else {
+      const btn = document.querySelector('.btn-request');
+      if (btn) { btn.textContent = 'Request sent ✓'; btn.style.opacity = '.5'; btn.style.pointerEvents = 'none'; }
+    }
+
+    switchScreen('screen-creator');
+    refreshNotifBadge();
+    renderNotifications();
+
+  } else {
+    const pw = document.getElementById('pw-input').value.trim();
+    if (pw !== 'admin') { showToast('Incorrect password'); return; }
+    switchScreen('screen-admin');
+    renderAdminRequests();
+    renderAdminCreators();
+    refreshAdminBadge();
+  }
+}
+
+// ─── LOGOUT ───
+function logout() {
+  document.getElementById('ig-input').value = '';
+  document.getElementById('pw-input').value = '';
+  // Reset creator nav to dashboard
+  document.querySelectorAll('#screen-creator .page').forEach(p => p.classList.remove('active'));
+  const dash = document.getElementById('page-dashboard');
+  if (dash) dash.classList.add('active');
+  document.querySelectorAll('#screen-creator .nav-item').forEach((n,i) => n.classList.toggle('active', i===0));
+  switchScreen('screen-login');
+  setRole('creator');
+}
+
+// ─── SCREEN SWITCH ───
+function switchScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active'); s.style.display = 'none';
+  });
+  const target = document.getElementById(id);
+  target.style.display = 'flex';
+  setTimeout(() => target.classList.add('active'), 10);
+}
+
+// ─── CREATOR PAGE NAV ───
+function showPage(name) {
+  document.querySelectorAll('#screen-creator .page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('#screen-creator .nav-item').forEach(n => n.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  if (name === 'notifications') { renderNotifications(); markAllRead(); }
+}
+
+// ─── ADMIN PAGE NAV ───
+function showAdminPage(name) {
+  document.querySelectorAll('#screen-admin .page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('#screen-admin .nav-item').forEach(n => n.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  if (name === 'admin-requests') { renderAdminRequests(); refreshAdminBadge(); }
+  if (name === 'admin-creators') renderAdminCreators();
+}
+
+// ─── CREATOR: SUBMIT SCRIPT REQUEST ───
+function submitRequest() {
+  const input = document.getElementById('script-request-input');
+  const btn = document.querySelector('.btn-request');
+  const context = input.value.trim();
+  if (!context) { showToast('Add some context first'); return; }
+
+  state.requests.push({
+    id: Date.now(),
+    creator: creatorUsername,
+    context,
+    phase: 'Phase 1 · Market Analysis',
+    time: 'Just now',
+    replied: false
+  });
+
+  if (state.creators[creatorUsername]) {
+    state.creators[creatorUsername].hasRequest = true;
+  }
+
+  input.disabled = true;
+  btn.textContent = 'Request sent ✓';
+  btn.style.opacity = '.5';
+  btn.style.pointerEvents = 'none';
+
+  showToast('Request sent — check your notifications when the script is ready');
+}
+
+// ─── ADMIN: RENDER REQUESTS ───
+function renderAdminRequests() {
+  const list = document.getElementById('request-list');
+  const empty = document.getElementById('requests-empty');
+  const pending = state.requests.filter(r => !r.replied);
+
+  if (pending.length === 0) {
+    if (empty) empty.style.display = 'block';
+    // Remove any rendered rows
+    list.querySelectorAll('.request-row').forEach(r => r.remove());
+    return;
+  }
+
+  if (empty) empty.style.display = 'none';
+  list.querySelectorAll('.request-row').forEach(r => r.remove());
+
+  pending.forEach(req => {
+    const div = document.createElement('div');
+    div.className = 'request-row';
+    div.id = 'req-' + req.id;
+    div.innerHTML = `
+      <div class="request-meta">
+        <div>
+          <div class="request-from">${req.creator}</div>
+          <div style="font-family:var(--font);font-size:10px;color:var(--gold);margin-top:2px">${req.phase}</div>
+        </div>
+        <div class="request-time">${req.time}</div>
+      </div>
+      <div class="request-msg">${req.context}</div>
+      <textarea class="admin-reply-area" placeholder="Write your personalised script here..."></textarea>
+      <button class="btn-send" onclick="sendScript(this, ${req.id}, '${req.creator}')">Send Script →</button>
+    `;
+    list.appendChild(div);
+  });
+}
+
+// ─── ADMIN: RENDER CREATORS ───
+function renderAdminCreators() {
+  const list = document.getElementById('creator-list');
+  const handles = Object.keys(state.creators);
+
+  if (handles.length === 0) {
+    list.innerHTML = `<div style="text-align:center;padding:48px 24px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-family:var(--serif);font-size:14px;color:var(--muted)">No creators yet. They'll appear here once they log in.</div>`;
+    return;
+  }
+
+  list.innerHTML = handles.map(handle => {
+    const c = state.creators[handle];
+    const hasReq = state.requests.some(r => r.creator === handle && !r.replied);
+    return `
+      <div class="creator-row">
+        <div>
+          <div class="creator-name">${handle}</div>
+          <div class="creator-meta">Phase ${c.phase} active${hasReq ? ' · Script request pending' : ''} · Joined ${c.joinedAt}</div>
+        </div>
+        <span class="phase-pill">Phase ${c.phase}</span>
+        <span class="phase-status ${hasReq ? 'status-pending' : 'status-active'}">${hasReq ? 'Request pending' : 'Active'}</span>
+        <button class="btn-unlock" onclick="unlockPhase(this,'${handle}')">Unlock Phase ${c.phase + 1}</button>
+      </div>
+    `;
+  }).join('');
+}
+
+// ─── ADMIN: SEND SCRIPT → CREATOR INBOX ───
+function sendScript(btn, reqId, creator) {
+  const row = document.getElementById('req-' + reqId);
+  const reply = row.querySelector('.admin-reply-area').value.trim();
+  if (!reply) { showToast('Write a script first'); return; }
+
+  // Mark request as replied
+  const req = state.requests.find(r => r.id === reqId);
+  if (req) req.replied = true;
+
+  // Push to creator notification store
+  if (!state.notifications[creator]) state.notifications[creator] = [];
+  state.notifications[creator].unshift({
+    id: Date.now(),
+    title: 'Your Personalised Script is Ready',
+    phase: req ? req.phase : 'Phase 1',
+    script: reply,
+    time: 'Just now',
+    read: false
+  });
+
+  row.style.opacity = '.4';
+  row.style.pointerEvents = 'none';
+  btn.textContent = 'Sent ✓';
+
+  refreshAdminBadge();
+  showToast('Script sent to ' + creator);
+}
+
+// ─── MOBILE NAV ───
+function mobileShowPage(name, el) {
+  document.querySelectorAll('#screen-creator .page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('#creator-mobile-nav .mobile-nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+  // Sync desktop sidebar
+  document.querySelectorAll('#screen-creator .nav-item').forEach(n => n.classList.remove('active'));
+  if (name === 'notifications') { renderNotifications(); markAllRead(); }
+}
+
+function mobileShowAdminPage(name, el) {
+  document.querySelectorAll('#screen-admin .page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('#screen-admin .mobile-nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+  if (name === 'admin-requests') { renderAdminRequests(); refreshAdminBadge(); }
+  if (name === 'admin-creators') renderAdminCreators();
+}
+
+// ─── BADGE ───
+function refreshAdminBadge() {
+  const pending = state.requests.filter(r => !r.replied).length;
+  const badge = document.getElementById('request-badge');
+  const mobileBadge = document.getElementById('mobile-request-badge');
+  if (pending > 0) {
+    badge.textContent = pending; badge.style.display = 'inline-block';
+    if (mobileBadge) { mobileBadge.textContent = pending; mobileBadge.style.display = 'block'; }
+  } else {
+    badge.style.display = 'none';
+    if (mobileBadge) mobileBadge.style.display = 'none';
+  }
+}
+
+// ─── CREATOR: RENDER NOTIFICATIONS ───
+function renderNotifications() {
+  const list = document.getElementById('notif-list');
+  const empty = document.getElementById('notif-empty');
+  const notifs = state.notifications[creatorUsername] || [];
+
+  if (notifs.length === 0) {
+    empty.style.display = 'block';
+    list.innerHTML = '';
+    return;
+  }
+
+  empty.style.display = 'none';
+  list.innerHTML = notifs.map(n => `
+    <div class="notif-card ${n.read ? '' : 'unread'}" id="notif-${n.id}">
+      <div class="notif-card-header">
+        <div class="notif-card-header-left">
+          <div class="notif-title">
+            ${!n.read ? '<span class="unread-dot"></span>' : ''}
+            ${n.title}
+          </div>
+          <div class="notif-meta">${n.phase} &nbsp;·&nbsp; ${n.time}</div>
+        </div>
+      </div>
+      <div class="notif-card-body">${n.script}</div>
+      <div class="notif-card-footer">
+        <button class="btn-copy-script" onclick="copyScript(this, ${n.id})">Copy Script</button>
+        ${!n.read ? `<button class="btn-mark-read" onclick="markOneRead(${n.id})">Mark as read</button>` : '<span style="font-family:var(--font);font-size:11px;color:var(--muted);padding:9px 4px">✓ Read</span>'}
+      </div>
+    </div>
+  `).join('');
+}
+
+function copyScript(btn, id) {
+  const card = document.getElementById('notif-' + id);
+  const text = card.querySelector('.notif-card-body').textContent.trim();
+  navigator.clipboard.writeText(text);
+  btn.textContent = 'Copied ✓';
+  showToast('Script copied to clipboard');
+  setTimeout(() => btn.textContent = 'Copy Script', 2000);
+}
+
+function markOneRead(id) {
+  const notifs = state.notifications[creatorUsername] || [];
+  const n = notifs.find(x => x.id === id);
+  if (n) n.read = true;
+  renderNotifications();
+  refreshNotifBadge();
+}
+
+function markAllRead() {
+  const notifs = state.notifications[creatorUsername] || [];
+  notifs.forEach(n => n.read = true);
+  refreshNotifBadge();
+}
+
+// ─── CREATOR BADGE ───
+function refreshNotifBadge() {
+  const notifs = state.notifications[creatorUsername] || [];
+  const unread = notifs.filter(n => !n.read).length;
+  const badge = document.getElementById('notif-badge');
+  const mobileBadge = document.getElementById('mobile-notif-badge');
+  if (unread > 0) {
+    badge.textContent = unread; badge.style.display = 'inline-block';
+    if (mobileBadge) { mobileBadge.textContent = unread; mobileBadge.style.display = 'block'; }
+  } else {
+    badge.style.display = 'none';
+    if (mobileBadge) mobileBadge.style.display = 'none';
+  }
+}
+
+// ─── POLL every 2s — updates badge + notifications page if open ───
+setInterval(() => {
+  if (creatorUsername && document.getElementById('screen-creator').classList.contains('active')) {
+    refreshNotifBadge();
+    if (document.getElementById('page-notifications').classList.contains('active')) {
+      renderNotifications();
+    }
+  }
+}, 2000);
+
+// ─── TEMPLATE TOGGLE ───
+function toggleTemplate(header) {
+  const body = header.nextElementSibling;
+  body.classList.toggle('open');
+  header.querySelector('.template-toggle').textContent = body.classList.contains('open') ? 'Close ↑' : 'View →';
+}
+
+// ─── CTA COPY ───
+function copyCTA(btn, variant) {
+  const texts = {
+    A: "I'm finalising a [SYSTEM/PROGRAM] for [AUDIENCE] right now. Everyone who fills out the form in my bio gets first access + a free guide.",
+    B: "Building something for [AUDIENCE] in the next few weeks. Form in my bio if you want early access.",
+    C: "Closing the early-access list soon. Bio link if you want a spot."
+  };
+  navigator.clipboard.writeText(texts[variant]);
+  btn.textContent = 'Copied ✓';
+  setTimeout(() => btn.textContent = 'Copy text', 2000);
+}
+
+// ─── UNLOCK PHASE ───
+function unlockPhase(btn, creator) {
+  if (state.creators[creator]) {
+    state.creators[creator].phase = Math.min(4, state.creators[creator].phase + 1);
+  }
+  btn.textContent = 'Unlocked ✓';
+  btn.style.opacity = '.5';
+  btn.style.pointerEvents = 'none';
+  showToast('Phase unlocked for ' + creator);
+  renderAdminCreators();
+}
+
+// ─── TOAST ───
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// ─── ENTER KEY ───
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('screen-login').classList.contains('active')) login();
+});
+
+// ─── INIT ───
+document.getElementById('screen-creator').style.display = 'none';
+document.getElementById('screen-admin').style.display = 'none';
+
+</script>
+</body>
+</html>
